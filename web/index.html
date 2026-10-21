@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wired-Like Wi-Fi Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M2 9a15 15 0 0 1 20 0M5.5 12.5a10 10 0 0 1 13 0M9 16a5 5 0 0 1 6 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="19.5" r="1.6" fill="currentColor"/></svg>
+    <div>
+      <div class="brand-name">Wired-Like Wi-Fi Lab</div>
+      <div class="brand-sub">Determinism · Density · Jitter in enterprise Wi-Fi</div>
+    </div>
+  </div>
+  <nav class="tabs" role="tablist">
+    <button class="tab active" role="tab" data-tab="sim" aria-selected="true">Simulator</button>
+    <button class="tab" role="tab" data-tab="live" aria-selected="false">Live speed test</button>
+    <button class="tab" role="tab" data-tab="about" aria-selected="false">How it works</button>
+  </nav>
+</header>
+
+<!-- ================================================================== -->
+<!-- SIMULATOR                                                          -->
+<!-- ================================================================== -->
+<main id="tab-sim" class="tabpanel active">
+  <aside class="controls card">
+    <section>
+      <h3 class="label">Scenario</h3>
+      <div class="presets">
+        <button class="chip" data-preset="office">Open office</button>
+        <button class="chip" data-preset="hall">Lecture hall</button>
+        <button class="chip" data-preset="factory">Factory floor</button>
+        <button class="chip" data-preset="arena">Conference / arena</button>
+      </div>
+    </section>
+
+    <section>
+      <h3 class="label">Wi-Fi generation</h3>
+      <div class="segmented" id="gen">
+        <button data-gen="wifi5">Wi-Fi 5</button>
+        <button data-gen="wifi6">Wi-Fi 6</button>
+        <button data-gen="wifi7" class="on">Wi-Fi 7</button>
+        <button data-gen="wifi8">Wi-Fi 8</button>
+      </div>
+      <p class="hint" id="gen-desc"></p>
+    </section>
+
+    <section class="sliders">
+      <label class="slider"><span>Devices <b id="v-devices">60</b></span>
+        <input type="range" id="devices" min="1" max="300" value="60"></label>
+      <label class="slider"><span>Access points <b id="v-aps">2</b></span>
+        <input type="range" id="aps" min="1" max="4" value="2"></label>
+      <label class="slider"><span>Background bulk traffic <b id="v-load">30%</b></span>
+        <input type="range" id="load" min="0" max="100" value="30"></label>
+      <label class="slider"><span>Neighbour-network interference <b id="v-obss">20%</b></span>
+        <input type="range" id="obss" min="0" max="100" value="20"></label>
+    </section>
+
+    <section>
+      <h3 class="label">Features</h3>
+      <div class="toggles" id="features"></div>
+    </section>
+
+    <div class="row gap">
+      <button class="btn primary" id="play">Pause</button>
+      <button class="btn" id="reset">Reset</button>
+    </div>
+  </aside>
+
+  <section class="stage">
+    <div class="kpis">
+      <div class="kpi hero">
+        <span class="kpi-label">Wired-likeness</span>
+        <span class="kpi-value" id="k-score">–</span>
+        <div class="meter"><div id="k-score-bar"></div></div>
+      </div>
+      <div class="kpi"><span class="kpi-label">Throughput</span><span class="kpi-value" id="k-tput">–</span></div>
+      <div class="kpi"><span class="kpi-label">Median latency</span><span class="kpi-value" id="k-p50">–</span><span class="kpi-sub" id="k-p50-eth"></span></div>
+      <div class="kpi"><span class="kpi-label">p99 latency</span><span class="kpi-value" id="k-p99">–</span><span class="kpi-sub" id="k-p99-eth"></span></div>
+      <div class="kpi"><span class="kpi-label">Jitter</span><span class="kpi-value" id="k-jit">–</span><span class="kpi-sub" id="k-jit-eth"></span></div>
+      <div class="kpi"><span class="kpi-label">Packet loss</span><span class="kpi-value" id="k-loss">–</span></div>
+      <div class="kpi"><span class="kpi-label">Fairness</span><span class="kpi-value" id="k-fair">–</span></div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-head"><h3>Floor plan</h3><span class="legend"><i class="dot good"></i>&lt;10 ms <i class="dot ok"></i>10–50 ms <i class="dot bad"></i>&gt;50 ms</span></div>
+        <canvas id="floor" class="floor" aria-label="Floor plan with access points and devices" role="img"></canvas>
+        <p class="hint" id="floor-caption"></p>
+      </div>
+      <div class="card">
+        <div class="card-head"><h3>Packet latency, last 10 s</h3><span class="legend"><i class="dot wifi"></i>Wi-Fi packets <i class="line eth"></i>Ethernet p99</span></div>
+        <canvas id="timeline" class="chart" aria-label="Latency over time" role="img"></canvas>
+        <div class="card-head sub"><h3>Latency distribution (CDF)</h3><span class="legend"><i class="line wifi"></i>Wi-Fi <i class="line eth"></i>Ethernet</span></div>
+        <canvas id="cdf" class="chart short" aria-label="Latency CDF" role="img"></canvas>
+      </div>
+    </div>
+
+    <div class="grid-3">
+      <div class="card">
+        <div class="card-head"><h3>Use-case readiness</h3></div>
+        <table class="ready" id="ready"></table>
+        <p class="hint">Worst-case p99 latency, jitter and loss vs. each application's budget.</p>
+      </div>
+      <div class="card">
+        <div class="card-head"><h3>Throughput per device</h3><span class="legend" id="bars-legend"></span></div>
+        <canvas id="bars" class="chart short" aria-label="Throughput per device" role="img"></canvas>
+        <p class="hint" id="bars-caption"></p>
+      </div>
+      <div class="card">
+        <div class="card-head"><h3>Compare generations</h3><button class="btn small" id="compare">Run</button></div>
+        <canvas id="gencmp" class="chart short" aria-label="Generation comparison" role="img"></canvas>
+        <p class="hint" id="gencmp-caption">Runs the current scenario on every generation with its best features on.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- ================================================================== -->
+<!-- LIVE SPEED TEST                                                    -->
+<!-- ================================================================== -->
+<main id="tab-live" class="tabpanel">
+  <div class="banner" id="offline" hidden>
+    <b>Server not reachable.</b> The live test needs <code>python server.py</code> running. Then open the address it prints (e.g. <code>http://localhost:8080</code>), not the HTML file directly.
+  </div>
+
+  <div class="live-grid">
+    <div class="card gauge-card">
+      <div class="row gap wrap">
+        <label class="field"><span>This device</span><input id="dev-name" maxlength="40" placeholder="e.g. Aaron's laptop"></label>
+        <label class="field"><span>Connection</span>
+          <select id="conn"><option value="wifi">Wi-Fi</option><option value="wired">Wired (Ethernet)</option></select></label>
+      </div>
+      <canvas id="gauge" class="gauge" aria-label="Speed gauge" role="img"></canvas>
+      <div class="phase" id="phase">Ready</div>
+      <div class="row gap center">
+        <button class="btn primary big" id="start">Start test</button>
+      </div>
+      <div class="steps" id="steps">
+        <span data-step="ping">Idle latency</span><span data-step="down">Download</span><span data-step="up">Upload</span><span data-step="loaded">Latency under load</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h3>Results</h3><span class="legend" id="res-time"></span></div>
+      <div class="results">
+        <div class="res"><span>Idle latency</span><b id="r-ping">–</b><small>median RTT</small></div>
+        <div class="res"><span>Jitter</span><b id="r-jit">–</b><small>mean |ΔRTT|</small></div>
+        <div class="res"><span>Download</span><b id="r-down">–</b><small>Mbps</small></div>
+        <div class="res"><span>Upload</span><b id="r-up">–</b><small>Mbps</small></div>
+        <div class="res"><span>Loaded latency</span><b id="r-loaded">–</b><small>p99 during download</small></div>
+        <div class="res"><span>Bufferbloat</span><b id="r-grade">–</b><small>grade</small></div>
+      </div>
+      <div class="card-head sub"><h3>Latency samples</h3><span class="legend"><i class="dot wifi"></i>idle <i class="dot bad"></i>under load</span></div>
+      <canvas id="pingchart" class="chart short" aria-label="Ping samples" role="img"></canvas>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h3>Wired vs Wi-Fi</h3></div>
+      <p class="hint">Run the test once on Ethernet and once on Wi-Fi from the same device, then compare.</p>
+      <div class="row gap wrap">
+        <label class="field"><span>Wired run</span><select id="cmp-a"></select></label>
+        <label class="field"><span>Wi-Fi run</span><select id="cmp-b"></select></label>
+      </div>
+      <div class="cmp" id="cmp-out"></div>
+      <div class="card-head sub"><h3>History</h3><button class="btn small" id="clear-hist">Clear</button></div>
+      <div class="table-wrap"><table class="hist" id="hist"></table></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h3>Devices online <b id="n-online">0</b></h3><button class="btn small" id="group">Start on all devices</button></div>
+      <p class="hint">High-density test: open this page on several phones and laptops, then press <b>Start on all devices</b>. Everyone runs the test at the same moment and results appear here.</p>
+      <div class="table-wrap"><table class="hist" id="clients"></table></div>
+    </div>
+  </div>
+</main>
+
+<!-- ================================================================== -->
+<!-- ABOUT                                                              -->
+<!-- ================================================================== -->
+<main id="tab-about" class="tabpanel">
+  <div class="about">
+    <div class="card">
+      <h2>What the simulator models</h2>
+      <p>Every 100 ms each device sends a small real-time packet (like a voice or control message). The simulator draws its latency from a simplified model of Wi-Fi channel access:</p>
+      <ul>
+        <li><b>Contention.</b> More active devices means more collisions and retries. OFDMA groups devices into resource units, so fewer of them fight for the channel.</li>
+        <li><b>Busy channel.</b> Bulk transfers hold the channel for long transmissions (up to ~4 ms). A real-time packet waits behind them. Frame preemption cuts that wait.</li>
+        <li><b>Neighbour networks.</b> Overlapping networks add busy time. Multi-AP coordination (Wi-Fi 8) removes most of it.</li>
+        <li><b>Multi-link operation.</b> Wi-Fi 7 sends on whichever of two bands frees up first, which trims the latency tail.</li>
+        <li><b>Scheduled access.</b> Restricted TWT / TSN-style scheduling gives real-time traffic reserved slots, which is what makes Wi-Fi behave most like a cable.</li>
+        <li><b>Queueing.</b> Without prioritization, real-time packets sit behind bulk data in the AP queue (bufferbloat).</li>
+      </ul>
+      <p>An Ethernet switch is simulated alongside as the "wired" reference. <b>Wired-likeness</b> compares median latency, p99 latency, jitter and loss against it: 100% means indistinguishable from a cable.</p>
+      <p class="hint">This is a teaching model, not a standards-accurate simulator like ns-3. Use it to explore trends, not to quote absolute numbers.</p>
+    </div>
+    <div class="card">
+      <h2>What the live test measures</h2>
+      <ul>
+        <li><b>Idle latency and jitter</b>: 30 small HTTP round-trips to the server.</li>
+        <li><b>Download / upload</b>: 4 parallel streams for 8 s each, ignoring the first second while TCP ramps up.</li>
+        <li><b>Latency under load</b>: pings while a download saturates the link. The rise over idle latency is your bufferbloat grade.</li>
+      </ul>
+      <p>Run <code>server.py</code> on a computer plugged in by Ethernet, so the Wi-Fi hop is the only wireless part being measured.</p>
+      <h2>Research it is based on</h2>
+      <ul class="refs">
+        <li>Adame, Carrascosa &amp; Bellalta, "Time-Sensitive Networking in IEEE 802.11be," <i>Sensors</i>, 2021.</li>
+        <li>Daldoul, Meddour &amp; Ksentini, "Performance evaluation of OFDMA and MU-MIMO in 802.11ax networks," <i>Computer Networks</i>, 2020.</li>
+        <li>Galati Giordano et al., "What Will Wi-Fi 8 Be? A Primer on IEEE 802.11bn Ultra High Reliability," arXiv:2303.10442.</li>
+        <li>Lee et al., "Performance Analysis of IEEE 802.11bn with Coordinated TDMA on Real-Time Applications," arXiv:2508.18755.</li>
+      </ul>
+    </div>
+  </div>
+</main>
+
+<footer class="foot">Wired-Like Wi-Fi Lab · runs locally, no data leaves your network</footer>
+
+<script src="charts.js"></script>
+<script src="sim.js"></script>
+<script src="live.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
